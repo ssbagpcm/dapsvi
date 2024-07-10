@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ChatGPT Interface Améliorée</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Roboto+Condensed:ital,wght@0,100..900;1,100..900&display=swap');
+
+    :root {
+      --bg-color: #1a1a1a;
+      --chat-bg: #2a2a2a;
+      --header-bg: #1a1a1a;
+      --input-bg: #2a2a2a;
+      --text-color: #e0e0e0;
+      --border-color: #3f3f3f;
+      --accent-color: #04352e;
+      --secondary-text: #a0a0a0;
+      --code-bg: #000000;
+      --code-text: #ffffff;
+      --sidebar-bg: #1e1e1e;
+      --sidebar-hover: #2a2a2a;
+      --resize-handle-color: #4a4a4a;
+      --message-hover: #333333;
+      --scrollbar-thumb: #4a4a4a;
+      --scrollbar-track: #2a2a2a;
+    }
+    .light-theme {
+      --bg-color: #f5f5f5;
+      --chat-bg: #ffffff;
+      --header-bg: #f0f0f0;
+      --input-bg: #ffffff;
+      --text-color: #333333;
+      --border-color: #e0e0e0;
+      --accent-color: #1a73e8;
+      --secondary-text: #666666;
+      --code-bg: #f8f8f8;
+      --code-text: #333333;
+      --sidebar-bg: #f0f0f0;
+      --sidebar-hover: #e0e0e0;
+      --resize-handle-color: #cccccc;
+      --message-hover: #f0f0f0;
+      --scrollbar-thumb: #c1c1c1;
+      --scrollbar-track: #f1f1f1;
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Roboto Condensed', sans-serif;
+    }
+    body, html {
+      height: 100%;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      transition: all 0.3s ease;
+    }
+    .app-container {
+      display: flex;
+      height: 100vh;
+    }
+    .sidebar {
+      width: 300px;
+      min-width: 200px;
+      max-width: 50%;
+      background-color: var(--sidebar-bg);
+      padding: 1rem;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      resize: horizontal;
+      position: relative;
+      transition: width 0.3s ease;
+    }
+    .sidebar::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      width: 4px;
+      background-color: var(--resize-handle-color);
+      cursor: ew-resize;
+    }
+    .sidebar-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+    .new-chat-btn {
+      flex-grow: 1;
+      padding: 0.75rem;
+      background-color: var(--accent-color);
+      color: var(--bg-color);
+      border: none;
+      border-radius: 0.5rem;
+      font-size: 1rem;
+      cursor: pointer;
+      margin-right: 0.5rem;
+      transition: background-color 0.2s;
+    }
+    .new-chat-btn:hover {
+      background-color: #3a80d2;
+    }
+    .theme-toggle {
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 1.5rem;
+      color: var(--text-color);
+      transition: transform 0.3s ease;
+    }
+    .theme-toggle:hover {
+      transform: rotate(180deg);
+    }
+    .conversation-list {
+      list-style-type: none;
+    }
+    .conversation-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.75rem;
+      cursor: pointer;
+      border-radius: 0.5rem;
+      margin-bottom: 0.5rem;
+      transition: background-color 0.2s, transform 0.2s;
+    }
+    .conversation-item:hover {
+      background-color: var(--sidebar-hover);
+      transform: translateX(5px);
+    }
+    .conversation-title {
+      flex-grow: 1;
+      margin-right: 0.5rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .conversation-actions {
+      display: flex;
+      gap: 0.5rem;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+    .conversation-item:hover .conversation-actions {
+      opacity: 1;
+    }
+    .rename-conversation, .delete-conversation {
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 1rem;
+      color: var(--secondary-text);
+      transition: color 0.2s, transform 0.2s;
+    }
+    .rename-conversation:hover, .delete-conversation:hover {
+      color: var(--accent-color);
+      transform: scale(1.1);
+    }
+    .chat-container {
+      flex-grow: 1;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      background-color: var(--bg-color);
+      min-width: 300px;
+    }
+    .chat-header {
+      background-color: var(--header-bg);
+      color: var(--accent-color);
+      padding: 1rem;
+      text-align: center;
+      font-size: 2.5rem;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .chat-messages {
+      flex-grow: 1;
+      overflow-y: auto;
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+    }
+    .message {
+      max-width: 80%;
+      margin-bottom: 1rem;
+      padding: 1rem;
+      border-radius: 1rem;
+      line-height: 1.5;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .message:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    .user-message {
+      align-self: flex-end;
+      background-color: var(--accent-color);
+      color: #ffffff;
+    }
+    .gpt5-message {
+      align-self: flex-start;
+      background-color: var(--chat-bg);
+      color: var(--text-color);
+    }
+    .chat-input {
+      display: flex;
+      padding: 1rem;
+      background-color: var(--bg-color);
+      border-top: 1px solid var(--border-color);
+    }
+    .chat-input textarea {
+      flex-grow: 1;
+      padding: 0.75rem;
+      border: none;
+      border-radius: 0.5rem;
+      font-size: 1rem;
+      background-color: var(--input-bg);
+      color: var(--text-color);
+      resize: none;
+      min-height: 60px;
+      max-height: 200px;
+      transition: box-shadow 0.2s;
+    }
+    .chat-input textarea:focus {
+      outline: none;
+      box-shadow: 0 0 0 2px var(--accent-color);
+    }
+    .send-btn {
+      background-color: var(--accent-color);
+      border: none;
+      color: #ffffff;
+      padding: 0.5rem 1rem;
+      font-size: 1rem;
+      border-radius: 0.5rem;
+      margin-left: 0.5rem;
+      cursor: pointer;
+      align-self: flex-end;
+      transition: background-color 0.2s, transform 0.2s;
+    }
+    .send-btn:hover {
+      background-color: #3a80d2;
+      transform: scale(1.05);
+    }
+    pre {
+      background-color: var(--code-bg);
+      color: var(--code-text);
+      padding: 1rem;
+      border-radius: 0.5rem;
+      overflow-x: auto;
+      margin: 1rem 0;
+    }
+    code {
+      font-family: 'Roboto Condensed', monospace;
+    }
+    
+    ::-webkit-scrollbar {
+      width: 10px;
+    }
+    ::-webkit-scrollbar-track {
+      background: var(--scrollbar-track);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: var(--scrollbar-thumb);
+      border-radius: 5px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--accent-color);
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .message {
+      animation: fadeIn 0.3s ease-out;
+    }
+    
+    @media (max-width: 768px) {
+      .app-container {
+        flex-direction: column;
+      }
+      .sidebar {
+        width: 100%;
+        max-width: 100%;
+        resize: none;
+      }
+      .chat-container {
+        height: calc(100vh - 200px);
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <div class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <button class="new-chat-btn">New conversation</button>
+        <button class="theme-toggle" id="themeToggle">🌙</button>
+      </div>
+      <ul class="conversation-list" id="conversationList">
+        
+      </ul>
+    </div>
+    <div class="chat-container">
+      <div class="chat-header">
+        TheScientist
+      </div>
+      <div class="chat-messages" id="chatMessages">
+        
+      </div>
+      <form id="chatForm" class="chat-input">
+        <textarea id="userInput" placeholder="Tapez votre message ici..." required></textarea>
+        <button type="submit" class="send-btn">Send</button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    const chatMessages = document.getElementById('chatMessages');
+    const chatForm = document.getElementById('chatForm');
+    const userInput = document.getElementById('userInput');
+    const conversationList = document.getElementById('conversationList');
+    const newChatBtn = document.querySelector('.new-chat-btn');
+    const themeToggle = document.getElementById('themeToggle');
+    const sidebar = document.getElementById('sidebar');
+
+    let conversations = [];
+    let currentConversationId = null;
+
+    function addMessage(content, isUser = false) {
+      const messageDiv = document.createElement('div');
+      messageDiv.classList.add('message');
+      messageDiv.classList.add(isUser ? 'user-message' : 'gpt5-message');
+      messageDiv.innerHTML = formatMessage(content);
+      chatMessages.appendChild(messageDiv);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+
+      if (currentConversationId !== null) {
+        conversations[currentConversationId].messages.push({
+          content,
+          isUser
+        });
+      }
+    }
+
+    function formatMessage(content) {
+      
+      content = content.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank">$1</a>');
+
+      
+      content = content.replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>');
+
+      
+      content = content.replace(/`([^`]+)`/g, '<code>$1</code>');
+
+      return content;
+    }
+
+    async function sendMessage(message) {
+      const response = await fetch('/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ message })
+      });
+      const data = await response.json();
+      return data.response;
+    }
+
+    async function handleSubmit(e) {
+      e.preventDefault();
+      const message = userInput.value.trim();
+      if (message) {
+        addMessage(message, true);
+        userInput.value = '';
+        const response = await sendMessage(message);
+        addMessage(response);
+      }
+    }
+
+    chatForm.addEventListener('submit', handleSubmit);
+
+    userInput.addEventListener('keydown', async function(e) {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        await handleSubmit(e);
+      }
+    });
+
+    newChatBtn.addEventListener('click', createNewConversation);
+
+    themeToggle.addEventListener('click', () => {
+      document.body.classList.toggle('light-theme');
+      themeToggle.textContent = document.body.classList.contains('light-theme') ? '🌙' : '☀️';
+    });
+
+    function createNewConversation() {
+      const newConversationId = conversations.length;
+      conversations.push({
+        id: newConversationId,
+        title: `Conversation ${newConversationId + 1}`,
+        messages: []
+      });
+      addConversationToSidebar(newConversationId);
+      switchToConversation(newConversationId);
+    }
+
+    function addConversationToSidebar(conversationId) {
+      const conversationItem = document.createElement('li');
+      conversationItem.classList.add('conversation-item');
+      conversationItem.innerHTML = `
+        <span class="conversation-title">${conversations[conversationId].title}</span>
+        <div class="conversation-actions">
+          <button class="rename-conversation" data-id="${conversationId}">✏️</button>
+          <button class="delete-conversation" data-id="${conversationId}">❌</button>
+        </div>
+      `;
+      conversationItem.querySelector('.conversation-title').addEventListener('click', () => switchToConversation(conversationId));
+      conversationItem.querySelector('.rename-conversation').addEventListener('click', (e) => {
+        e.stopPropagation();
+        renameConversation(conversationId);
+      });
+      conversationItem.querySelector('.delete-conversation').addEventListener('click', (e) => {
+        e.stopPropagation();
+        deleteConversation(conversationId);
+      });
+      conversationList.appendChild(conversationItem);
+    }
+
+    function renameConversation(conversationId) {
+      const newTitle = prompt("Entrez le nouveau nom de la conversation:", conversations[conversationId].title);
+      if (newTitle !== null && newTitle.trim() !== "") {
+        conversations[conversationId].title = newTitle.trim();
+        updateConversationList();
+      }
+    }
+
+    function deleteConversation(conversationId) {
+      if (confirm("Êtes-vous sûr de vouloir supprimer cette conversation ?")) {
+        conversations = conversations.filter(conv => conv.id !== conversationId);
+        updateConversationList();
+        if (currentConversationId === conversationId) {
+          currentConversationId = null;
+          chatMessages.innerHTML = '';
+        }
+      }
+    }
+
+    function updateConversationList() {
+      conversationList.innerHTML = '';
+      conversations.forEach(conv => addConversationToSidebar(conv.id));
+    }
+
+    function switchToConversation(conversationId) {
+      currentConversationId = conversationId;
+      chatMessages.innerHTML = '';
+      conversations[conversationId].messages.forEach(message => {
+        addMessage(message.content, message.isUser);
+      });
+    }
+
+    let isResizing = false;
+    let lastDownX = 0;
+
+    sidebar.addEventListener('mousedown', (e) => {
+      if (e.offsetX > sidebar.offsetWidth - 4) {
+        isResizing = true;
+        lastDownX = e.clientX;
+      }
+    });
+
+    document.addEventListener('mousemove', (e) => {
+      if (!isResizing) return;
+      const offsetRight = document.body.offsetWidth - (e.clientX - document.body.offsetLeft);
+      const minWidth = 200;
+      const maxWidth = document.body.offsetWidth * 0.5;
+      const newWidth = Math.max(minWidth, Math.min(maxWidth, document.body.offsetWidth - offsetRight));
+      sidebar.style.width = newWidth + 'px';
+    });
+
+    document.addEventListener('mouseup', () => {
+      isResizing = false;
+    });
+  </script>
+</body>
+</html>
